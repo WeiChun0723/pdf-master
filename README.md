@@ -85,7 +85,16 @@ Once the application is running:
 
 ## Docker
 
-Build and run the container from `backend/`:
+Pull and run the prebuilt image from Docker Hub:
+
+```bash
+docker pull weichunlai/pdf-master:latest
+docker run --rm -p 8080:8080 weichunlai/pdf-master:latest
+```
+
+The API is then available at `http://localhost:8080`, with Swagger UI at `http://localhost:8080/swagger-ui/index.html`. Press `Ctrl+C` to stop and remove the container.
+
+To build the image from source instead, run these commands from `backend/`:
 
 ```bash
 docker build -t pdf-master .
