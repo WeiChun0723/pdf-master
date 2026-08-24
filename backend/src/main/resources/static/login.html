@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Sign in | PDF Master</title>
+</head>
+<body>
+    <main>
+        <h1>PDF Master API</h1>
+        <p>Sign in to use the API documentation.</p>
+        <button id="google-login" type="button">Continue with Google</button>
+    </main>
+    <script type="module">
+        import { getSupabase, nextPath } from "/auth-client.js"
+
+        const supabase = await getSupabase()
+        const next = nextPath()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) window.location.replace(next)
+
+        document.querySelector("#google-login").addEventListener("click", async () => {
+            await supabase.auth.signInWithOAuth({
+                provider: "google",
+                options: { redirectTo: `${window.location.origin}/login.html?next=${encodeURIComponent(next)}` },
+            })
+        })
+    </script>
+</body>
+</html>
