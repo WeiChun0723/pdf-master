@@ -23,8 +23,8 @@
                 dom_id: "#swagger-ui",
                 presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
                 layout: "StandaloneLayout",
+                onComplete: () => window.ui.preauthorizeApiKey("supabaseAuth", session.access_token),
             })
-            window.ui.preauthorizeApiKey("supabaseAuth", session.access_token)
         }
     </script>
 </body>
