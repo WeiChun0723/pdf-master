@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>PDF Master API</title>
+    <link rel="stylesheet" href="/swagger-ui/swagger-ui.css">
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="/swagger-ui/swagger-ui-bundle.js"></script>
+    <script src="/swagger-ui/swagger-ui-standalone-preset.js"></script>
+    <script type="module">
+        import { getSupabase } from "/auth-client.js"
+
+        const supabase = await getSupabase()
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+            window.location.replace("/login.html?next=/docs/index.html")
+        } else {
+            window.ui = SwaggerUIBundle({
+                url: "/openapi",
+                dom_id: "#swagger-ui",
+                presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
+                layout: "StandaloneLayout",
+            })
+            window.ui.preauthorizeApiKey("supabaseAuth", session.access_token)
+        }
+    </script>
+</body>
+</html>
