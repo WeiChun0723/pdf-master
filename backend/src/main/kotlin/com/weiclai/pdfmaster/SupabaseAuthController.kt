@@ -96,14 +96,7 @@ class SupabaseAuthController(
         }
 
         try {
-            val session =
-                supabase
-                    .post()
-                    .uri("/token?grant_type=pkce")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(mapOf("auth_code" to code, "code_verifier" to flow[1]))
-                    .retrieve()
-                    .body(SupabaseSession::class.java)
+            val session = exchangeSession("pkce", mapOf("auth_code" to code, "code_verifier" to flow[1]))
             if (session == null) {
                 log.warn("Supabase login exchange returned an empty session")
                 response.sendRedirect("/login.html?error=login_failed")
@@ -139,14 +132,7 @@ class SupabaseAuthController(
         }
 
         try {
-            val refreshed =
-                supabase
-                    .post()
-                    .uri("/token?grant_type=refresh_token")
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .body(mapOf("refresh_token" to refreshToken))
-                    .retrieve()
-                    .body(SupabaseSession::class.java)
+            val refreshed = exchangeSession("refresh_token", mapOf("refresh_token" to refreshToken))
             if (refreshed == null) {
                 clearSessionCookies(response)
                 response.status = HttpStatus.UNAUTHORIZED.value()
@@ -200,6 +186,18 @@ class SupabaseAuthController(
         clearCookie(response, ACCESS_TOKEN_COOKIE)
         clearCookie(response, REFRESH_TOKEN_COOKIE)
     }
+
+    private fun exchangeSession(
+        grantType: String,
+        body: Map<String, String>,
+    ): SupabaseSession? =
+        supabase
+            .post()
+            .uri("/token?grant_type=$grantType")
+            .contentType(MediaType.APPLICATION_JSON)
+            .body(body)
+            .retrieve()
+            .body(SupabaseSession::class.java)
 
     private fun setCookie(
         response: HttpServletResponse,

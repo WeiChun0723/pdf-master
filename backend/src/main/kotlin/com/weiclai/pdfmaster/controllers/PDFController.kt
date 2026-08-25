@@ -4,7 +4,6 @@ import com.itextpdf.text.BaseColor
 import com.itextpdf.text.Document
 import com.itextpdf.text.Element.ALIGN_CENTER
 import com.itextpdf.text.Font
-import com.itextpdf.text.Phrase
 import com.itextpdf.text.pdf.BaseFont
 import com.itextpdf.text.pdf.PdfCopy
 import com.itextpdf.text.pdf.PdfGState
@@ -31,6 +30,9 @@ import java.util.zip.GZIPOutputStream
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
 import javax.imageio.ImageIO
+
+private val DOCX_MEDIA_TYPE =
+    MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document")
 
 @RestController
 @RequestMapping("/api/pdf")
@@ -63,20 +65,17 @@ class PDFController {
         val writer = PdfCopy(document, outputStream)
         document.open()
         for (file in files) {
-            val pdfReader = PdfReader(file.inputStream)
-            for (page in 1..pdfReader.numberOfPages) {
-                val importedPage = writer.getImportedPage(pdfReader, page)
-                writer.addPage(importedPage)
+            val reader = PdfReader(file.inputStream)
+            try {
+                for (page in 1..reader.numberOfPages) {
+                    writer.addPage(writer.getImportedPage(reader, page))
+                }
+            } finally {
+                reader.close()
             }
         }
         document.close()
-        val resource = ByteArrayResource(outputStream.toByteArray())
-        return ResponseEntity
-            .ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=combined.pdf")
-            .contentLength(resource.contentLength())
-            .contentType(MediaType.APPLICATION_PDF)
-            .body(resource)
+        return download("combined.pdf", MediaType.APPLICATION_PDF, outputStream.toByteArray())
     }
 
     @PostMapping("/add-watermark", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
@@ -93,13 +92,11 @@ class PDFController {
         @RequestParam(value = "fontSize", defaultValue = "45f") fontSize: Float = 45f,
         @RequestParam(value = "rotation", defaultValue = "45f") rotation: Float = 45f,
     ): ResponseEntity<ByteArrayResource> {
-        println("Adding water mark to pdf")
         val reader = PdfReader(file.inputStream)
         val outputStream = ByteArrayOutputStream()
         val stamper = PdfStamper(reader, outputStream)
         val baseFont = BaseFont.createFont(BaseFont.HELVETICA, BaseFont.WINANSI, BaseFont.NOT_EMBEDDED)
         val font = Font(Font.FontFamily.HELVETICA, fontSize, Font.NORMAL, BaseColor.LIGHT_GRAY)
-        val phrase = Phrase(watermarkText, font)
 
         for (i in 1..reader.numberOfPages) {
             val pageSize = reader.getPageSize(i)
@@ -113,18 +110,12 @@ class PDFController {
 
             content.beginText()
             content.setFontAndSize(baseFont, font.size)
-            content.showTextAligned(ALIGN_CENTER, phrase.content, x, y, rotation)
+            content.showTextAligned(ALIGN_CENTER, watermarkText, x, y, rotation)
             content.endText()
         }
         stamper.close()
         reader.close()
-        val resource = ByteArrayResource(outputStream.toByteArray())
-        return ResponseEntity
-            .ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=watermarked.pdf")
-            .contentLength(resource.contentLength())
-            .contentType(MediaType.APPLICATION_PDF)
-            .body(resource)
+        return download("watermarked.pdf", MediaType.APPLICATION_PDF, outputStream.toByteArray())
     }
 
     @PostMapping("/convert", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
@@ -144,61 +135,46 @@ class PDFController {
             FileType.PNG -> convertToPNG(file)
         }
 
-    fun convertToPNG(file: MultipartFile): ResponseEntity<ByteArrayResource> {
-        val pdf = Loader.loadPDF(file.bytes)
-        val renderer = PDFRenderer(pdf)
-
-        val images = mutableListOf<ByteArray>()
-        for (page in 0 until pdf.numberOfPages) {
-            val image = renderer.renderImageWithDPI(page, 300f, ImageType.RGB)
-            val outputStream = ByteArrayOutputStream()
-            ImageIO.write(image, "png", outputStream)
-            images.add(outputStream.toByteArray())
-        }
-
-        val zipFile = ByteArrayOutputStream()
-        GZIPOutputStream(zipFile).use { gzipOut ->
-            ZipOutputStream(gzipOut).use { zipOut ->
-                for ((index, image) in images.withIndex()) {
-                    val entry = ZipEntry("image-$index.png")
-                    zipOut.putNextEntry(entry)
-                    zipOut.write(image)
-                    zipOut.closeEntry()
+    private fun convertToPNG(file: MultipartFile): ResponseEntity<ByteArrayResource> {
+        val archive = ByteArrayOutputStream()
+        Loader.loadPDF(file.bytes).use { pdf ->
+            val renderer = PDFRenderer(pdf)
+            GZIPOutputStream(archive).use { gzip ->
+                ZipOutputStream(gzip).use { zip ->
+                    repeat(pdf.numberOfPages) { page ->
+                        zip.putNextEntry(ZipEntry("image-$page.png"))
+                        ImageIO.write(renderer.renderImageWithDPI(page, 300f, ImageType.RGB), "png", zip)
+                        zip.closeEntry()
+                    }
                 }
             }
         }
-
-        pdf.close()
-        val resource = ByteArrayResource(zipFile.toByteArray())
-        return ResponseEntity
-            .ok()
-            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=images.gz")
-            .header(HttpHeaders.CONTENT_ENCODING, "gzip")
-            .contentLength(resource.contentLength())
-            .contentType(MediaType.APPLICATION_OCTET_STREAM)
-            .body(resource)
+        return download("images.gz", MediaType.APPLICATION_OCTET_STREAM, archive.toByteArray(), "gzip")
     }
 
-    fun convertToWordDocument(file: MultipartFile): ResponseEntity<ByteArrayResource> {
-        val pdfTextStripper = PDFTextStripper()
-        Loader.loadPDF(file.bytes).use { document ->
-            val text = pdfTextStripper.getText(document)
+    private fun convertToWordDocument(file: MultipartFile): ResponseEntity<ByteArrayResource> =
+        Loader.loadPDF(file.bytes).use { pdf ->
             XWPFDocument().use { wordDocument ->
-                val paragraph = wordDocument.createParagraph()
-                paragraph.createRun().setText(text)
-                ByteArrayOutputStream().use {
-                    wordDocument.write(it)
-                    val resource = ByteArrayResource(it.toByteArray())
-                    return ResponseEntity
-                        .ok()
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=word.docx")
-                        .contentLength(resource.contentLength())
-                        .contentType(MediaType.APPLICATION_PDF)
-                        .body(resource)
-                }
+                wordDocument.createParagraph().createRun().setText(PDFTextStripper().getText(pdf))
+                val output = ByteArrayOutputStream()
+                wordDocument.write(output)
+                download("word.docx", DOCX_MEDIA_TYPE, output.toByteArray())
             }
         }
-    }
+
+    private fun download(
+        filename: String,
+        contentType: MediaType,
+        content: ByteArray,
+        contentEncoding: String? = null,
+    ): ResponseEntity<ByteArrayResource> =
+        ResponseEntity
+            .ok()
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=$filename")
+            .apply { contentEncoding?.let { header(HttpHeaders.CONTENT_ENCODING, it) } }
+            .contentLength(content.size.toLong())
+            .contentType(contentType)
+            .body(ByteArrayResource(content))
 
     enum class FileType {
         DOCX,

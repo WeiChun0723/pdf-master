@@ -1,11 +1,7 @@
 package com.weiclai.pdfmaster
 
-import jakarta.servlet.Filter
-import jakarta.servlet.http.HttpServletResponse
-import org.springframework.boot.web.servlet.FilterRegistrationBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.core.Ordered
 import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.http.SessionCreationPolicy
@@ -13,6 +9,7 @@ import org.springframework.security.oauth2.server.resource.web.BearerTokenResolv
 import org.springframework.security.web.SecurityFilterChain
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy
 
 private const val CONTENT_SECURITY_POLICY =
     "default-src 'self'; " +
@@ -36,7 +33,11 @@ class SecurityConfig {
         }
 
         http
-            .csrf {
+            .headers {
+                it
+                    .contentSecurityPolicy { policy -> policy.policyDirectives(CONTENT_SECURITY_POLICY) }
+                    .referrerPolicy { policy -> policy.policy(ReferrerPolicy.NO_REFERRER) }
+            }.csrf {
                 it
                     .csrfTokenRepository(csrfRepository)
                     .csrfTokenRequestHandler(CsrfTokenRequestAttributeHandler())
@@ -74,21 +75,4 @@ class SecurityConfig {
                 null
             }
         }
-
-    @Bean
-    fun securityHeadersFilter(): FilterRegistrationBean<Filter> {
-        val filter =
-            Filter { request, response, chain ->
-                (response as HttpServletResponse).apply {
-                    setHeader("Content-Security-Policy", CONTENT_SECURITY_POLICY)
-                    setHeader("Referrer-Policy", "no-referrer")
-                    setHeader("X-Content-Type-Options", "nosniff")
-                    setHeader("X-Frame-Options", "DENY")
-                }
-                chain.doFilter(request, response)
-            }
-        return FilterRegistrationBean(filter).apply {
-            order = Ordered.HIGHEST_PRECEDENCE
-        }
-    }
 }
