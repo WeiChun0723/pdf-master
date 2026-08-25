@@ -16,10 +16,9 @@
         const supabase = await getSupabase()
         const { data: { session } } = await supabase.auth.getSession()
         if (!session) {
-            const next = "/docs/index.html"
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: "google",
-                options: { redirectTo: `${window.location.origin}/login.html?next=${encodeURIComponent(next)}` },
+                options: { redirectTo: `${window.location.origin}/login.html` },
             })
             if (error) document.querySelector("#swagger-ui").textContent = "Unable to start Google sign-in."
         } else {

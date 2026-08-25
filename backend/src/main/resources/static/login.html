@@ -12,13 +12,12 @@
         <a id="retry" href="/docs/index.html" hidden>Try again</a>
     </main>
     <script type="module">
-        import { getSupabase, nextPath } from "/auth-client.js"
+        import { getSupabase } from "/auth-client.js"
 
         const supabase = await getSupabase()
-        const next = nextPath()
         const { data: { session } } = await supabase.auth.getSession()
         if (session) {
-            window.location.replace(next)
+            window.location.replace("/docs/index.html")
         } else {
             document.querySelector("#status").textContent = "Sign-in did not complete."
             document.querySelector("#retry").hidden = false

@@ -17,7 +17,7 @@ PDF Master is a Kotlin and Spring Boot REST API for common PDF operations. It ca
 | Area | Technology |
 | --- | --- |
 | Language | Kotlin 2.3.10 on Java 25 |
-| Framework | Spring Boot 4.0.3 and Spring Web MVC |
+| Framework | Spring Boot 4.0.3, Spring Web MVC, and Spring Security |
 | Build | Gradle 9.3.1 wrapper |
 | PDF processing | iText 5.5.13.4 and Apache PDFBox 3.0.6 |
 | Word documents | Apache POI 5.5.1 |
@@ -35,10 +35,12 @@ The Gradle wrapper is included, so a system-wide Gradle installation is not requ
 
 ## Run locally
 
-From the repository root:
+Set the public Supabase Auth configuration, then start the application from the repository root:
 
 ```bash
 cd backend
+export SUPABASE_AUTH_URL=https://your-project.supabase.co
+export SUPABASE_AUTH_PUBLISHABLE_KEY=sb_publishable_your_key
 ./gradlew bootRun
 ```
 
@@ -46,6 +48,8 @@ On Windows PowerShell:
 
 ```powershell
 cd backend
+$env:SUPABASE_AUTH_URL = "https://your-project.supabase.co"
+$env:SUPABASE_AUTH_PUBLISHABLE_KEY = "sb_publishable_your_key"
 .\gradlew.bat bootRun
 ```
 
@@ -66,7 +70,7 @@ The application JAR is written to `backend/build/libs/`.
 
 ## API
 
-All PDF endpoints use `multipart/form-data` under `/api/pdf`.
+Supabase handles Google login and issues JWTs. Spring Security validates each JWT's signature, issuer, expiry, and `authenticated` audience before allowing access to `/api/**`. All PDF endpoints use `multipart/form-data` under `/api/pdf`.
 
 | Method | Endpoint | Parameters | Result |
 | --- | --- | --- | --- |
@@ -80,7 +84,7 @@ DOCX conversion extracts text only and does not preserve the source layout. PNG 
 Once the application is running:
 
 - OpenAPI specification: `http://localhost:8080/openapi`
-- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- Authenticated Swagger UI: `http://localhost:8080/docs/index.html`
 - Actuator endpoints: `http://localhost:8080/actuator`
 
 ## Docker
@@ -89,7 +93,10 @@ Pull and run the prebuilt image from Docker Hub:
 
 ```bash
 docker pull weichunlai/pdf-master:latest
-docker run --rm -p 8080:8080 weichunlai/pdf-master:latest
+docker run --rm -p 8080:8080 \
+  -e SUPABASE_AUTH_URL=https://your-project.supabase.co \
+  -e SUPABASE_AUTH_PUBLISHABLE_KEY=sb_publishable_your_key \
+  weichunlai/pdf-master:latest
 ```
 
 The API is then available at `http://localhost:8080`, with Swagger UI at `http://localhost:8080/swagger-ui/index.html`. Press `Ctrl+C` to stop and remove the container.
