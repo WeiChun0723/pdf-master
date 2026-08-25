@@ -3,26 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Completing sign-in | PDF Master</title>
+    <title>Sign in | PDF Master</title>
 </head>
 <body>
     <main>
         <h1>PDF Master API</h1>
-        <p id="status" aria-live="polite">Completing sign-in…</p>
-        <a id="retry" href="/docs/index.html" hidden>Try again</a>
+        <p>Sign-in did not complete.</p>
+        <a href="/auth/login">Try Google sign-in again</a>
     </main>
-    <script type="module">
-        import { getSupabase, nextPath } from "/auth-client.js"
-
-        const supabase = await getSupabase()
-        const next = nextPath()
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session) {
-            window.location.replace(next)
-        } else {
-            document.querySelector("#status").textContent = "Sign-in did not complete."
-            document.querySelector("#retry").hidden = false
-        }
-    </script>
 </body>
 </html>

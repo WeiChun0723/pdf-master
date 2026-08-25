@@ -20,7 +20,7 @@ data class AuthenticatedUserResponse(
 @RequestMapping("/api/auth")
 class AuthenticatedUserController {
     @GetMapping("/me")
-    @Operation(summary = "Show the authenticated user's validated JWT metadata")
+    @Operation(summary = "Show the authenticated user's validated session metadata")
     fun me(
         @AuthenticationPrincipal jwt: Jwt,
     ) = AuthenticatedUserResponse(
