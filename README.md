@@ -41,6 +41,7 @@ Set the public Supabase Auth configuration, then start the application from the 
 cd backend
 export SUPABASE_AUTH_URL=https://your-project.supabase.co
 export SUPABASE_AUTH_PUBLISHABLE_KEY=sb_publishable_your_key
+export SUPABASE_AUTH_REDIRECT_URI=http://localhost:8080/auth/callback
 ./gradlew bootRun
 ```
 
@@ -50,10 +51,13 @@ On Windows PowerShell:
 cd backend
 $env:SUPABASE_AUTH_URL = "https://your-project.supabase.co"
 $env:SUPABASE_AUTH_PUBLISHABLE_KEY = "sb_publishable_your_key"
+$env:SUPABASE_AUTH_REDIRECT_URI = "http://localhost:8080/auth/callback"
 .\gradlew.bat bootRun
 ```
 
 The service starts on `http://localhost:8080` by default.
+
+Add `http://localhost:8080/auth/callback` to the allowed redirect URLs in Supabase Auth. Production must use its public HTTPS callback, for example `https://pdftoolbox.link/auth/callback`.
 
 ## Build, test, and format
 
@@ -70,7 +74,7 @@ The application JAR is written to `backend/build/libs/`.
 
 ## API
 
-Supabase handles Google login and issues JWTs. Spring Security validates each JWT's signature, issuer, expiry, and `authenticated` audience before allowing access to `/api/**`. All PDF endpoints use `multipart/form-data` under `/api/pdf`.
+Supabase handles Google login and issues JWTs. Spring completes the PKCE exchange and stores the access and refresh tokens in `Secure`, `HttpOnly`, `SameSite=Lax` cookies; tokens are never exposed to browser JavaScript or local storage. Spring refreshes the session, validates each JWT's signature, issuer, expiry, and `authenticated` audience, and requires a CSRF token for state-changing requests. All PDF endpoints use `multipart/form-data` under `/api/pdf`.
 
 | Method | Endpoint | Parameters | Result |
 | --- | --- | --- | --- |
@@ -96,10 +100,11 @@ docker pull weichunlai/pdf-master:latest
 docker run --rm -p 8080:8080 \
   -e SUPABASE_AUTH_URL=https://your-project.supabase.co \
   -e SUPABASE_AUTH_PUBLISHABLE_KEY=sb_publishable_your_key \
+  -e SUPABASE_AUTH_REDIRECT_URI=http://localhost:8080/auth/callback \
   weichunlai/pdf-master:latest
 ```
 
-The API is then available at `http://localhost:8080`, with Swagger UI at `http://localhost:8080/swagger-ui/index.html`. Press `Ctrl+C` to stop and remove the container.
+The API is then available at `http://localhost:8080`, with authenticated Swagger UI at `http://localhost:8080/docs/index.html`. Press `Ctrl+C` to stop and remove the container.
 
 To build the image from source instead, run these commands from `backend/`:
 

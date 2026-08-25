@@ -7,29 +7,10 @@
     <link rel="stylesheet" href="/swagger-ui/swagger-ui.css">
 </head>
 <body>
+    <button id="logout" type="button">Sign out</button>
     <div id="swagger-ui"></div>
     <script src="/swagger-ui/swagger-ui-bundle.js"></script>
     <script src="/swagger-ui/swagger-ui-standalone-preset.js"></script>
-    <script type="module">
-        import { getSupabase } from "/auth-client.js"
-
-        const supabase = await getSupabase()
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) {
-            const { error } = await supabase.auth.signInWithOAuth({
-                provider: "google",
-                options: { redirectTo: `${window.location.origin}/login.html` },
-            })
-            if (error) document.querySelector("#swagger-ui").textContent = "Unable to start Google sign-in."
-        } else {
-            window.ui = SwaggerUIBundle({
-                url: "/openapi",
-                dom_id: "#swagger-ui",
-                presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],
-                layout: "StandaloneLayout",
-                onComplete: () => window.ui.preauthorizeApiKey("supabaseAuth", session.access_token),
-            })
-        }
-    </script>
+    <script type="module" src="/docs/app.js"></script>
 </body>
 </html>
