@@ -13,6 +13,8 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.security.oauth2.server.resource.autoconfigure.servlet.OAuth2ResourceServerAutoConfiguration
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest
 import org.springframework.context.annotation.Import
 import org.springframework.http.HttpHeaders
@@ -28,8 +30,12 @@ import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.ZipInputStream
 
-@WebMvcTest(PDFController::class)
+@WebMvcTest(
+    controllers = [PDFController::class],
+    excludeAutoConfiguration = [OAuth2ResourceServerAutoConfiguration::class],
+)
 @Import(PdfService::class, ApiExceptionHandler::class)
+@AutoConfigureMockMvc(addFilters = false)
 class PDFControllerTest {
     @Autowired
     private lateinit var mockMvc: MockMvc
@@ -142,8 +148,12 @@ class PDFControllerTest {
     }
 }
 
-@WebMvcTest(PDFController::class)
+@WebMvcTest(
+    controllers = [PDFController::class],
+    excludeAutoConfiguration = [OAuth2ResourceServerAutoConfiguration::class],
+)
 @Import(PdfService::class, ApiExceptionHandler::class)
+@AutoConfigureMockMvc(addFilters = false)
 @TestPropertySource(properties = ["pdf.max-pages=1"])
 class PDFControllerPageLimitTest {
     @Autowired
