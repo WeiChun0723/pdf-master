@@ -3,7 +3,6 @@ package com.weiclai.pdfmaster.controllers
 import com.weiclai.pdfmaster.pdf.FileType
 import com.weiclai.pdfmaster.pdf.PdfService
 import io.swagger.v3.oas.annotations.Operation
-import io.swagger.v3.oas.annotations.responses.ApiResponse
 import org.springframework.core.io.ByteArrayResource
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
@@ -19,73 +18,37 @@ import org.springframework.web.multipart.MultipartFile
 class PDFController(
     private val pdfService: PdfService,
 ) {
-    @PostMapping("/upload", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
-    @Operation(
-        summary = "Upload pdf file",
-        responses = [
-            ApiResponse(responseCode = "200", description = "Success"),
-            ApiResponse(responseCode = "400", description = "Invalid or empty PDF"),
-        ],
-    )
-    fun uploadPdf(
-        @RequestParam(value = "files", required = true) file: MultipartFile,
-    ): String {
-        pdfService.validate(file)
-        return "The file name ${file.originalFilename}, size ${file.size} uploaded successfully."
-    }
-
     @PostMapping("/combine", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
-    @Operation(
-        summary = "Upload pdf files to combine",
-        responses = [
-            ApiResponse(responseCode = "200", description = "Success"),
-            ApiResponse(responseCode = "400", description = "Invalid or empty PDF"),
-        ],
-    )
+    @Operation(summary = "Upload pdf files to combine")
     fun combinePdf(
         @RequestParam(value = "files", required = true) files: List<MultipartFile>,
-    ): ResponseEntity<ByteArrayResource> = pdfAttachment("combined.pdf", pdfService.combine(files))
+    ): ResponseEntity<ByteArrayResource> = attachment("combined.pdf", pdfService.combine(files), MediaType.APPLICATION_PDF)
 
     @PostMapping("/add-watermark", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
-    @Operation(
-        summary = "Add water mark to pdf",
-        responses = [
-            ApiResponse(responseCode = "200", description = "Success"),
-            ApiResponse(responseCode = "400", description = "Invalid or empty PDF"),
-        ],
-    )
+    @Operation(summary = "Add water mark to pdf")
     fun addWaterMark(
         @RequestParam(value = "file", required = true) file: MultipartFile,
         @RequestParam(value = "watermarkText", defaultValue = "Testing") watermarkText: String = "Testing",
         @RequestParam(value = "fontSize", defaultValue = "45f") fontSize: Float = 45f,
         @RequestParam(value = "rotation", defaultValue = "45f") rotation: Float = 45f,
-    ): ResponseEntity<ByteArrayResource> = pdfAttachment("watermarked.pdf", pdfService.watermark(file, watermarkText, fontSize, rotation))
+    ): ResponseEntity<ByteArrayResource> =
+        attachment(
+            "watermarked.pdf",
+            pdfService.watermark(file, watermarkText, fontSize, rotation),
+            MediaType.APPLICATION_PDF,
+        )
 
     @PostMapping("/convert", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
-    @Operation(
-        summary = "Convert pdf to Word document (DOCX) or image. The format will not be retain and will only show text.",
-        responses = [
-            ApiResponse(responseCode = "200", description = "Success"),
-            ApiResponse(responseCode = "400", description = "Invalid or empty PDF"),
-        ],
-    )
+    @Operation(summary = "Convert pdf to Word document (DOCX) or image. The format will not be retain and will only show text.")
     fun convertPdf(
         @RequestParam(value = "file", required = true) file: MultipartFile,
         @RequestParam(value = "fileType", defaultValue = "DOCX") fileType: FileType,
-    ): ResponseEntity<ByteArrayResource> {
-        val body = pdfService.convert(file, fileType)
-        return when (fileType) {
-            FileType.DOCX ->
-                attachment("word.docx", body, DOCX_MEDIA_TYPE)
-            FileType.PNG ->
-                attachment("images.zip", body, ZIP_MEDIA_TYPE)
-        }
-    }
-
-    private fun pdfAttachment(
-        filename: String,
-        bytes: ByteArray,
-    ): ResponseEntity<ByteArrayResource> = attachment(filename, bytes, MediaType.APPLICATION_PDF)
+    ): ResponseEntity<ByteArrayResource> =
+        attachment(
+            fileType.filename,
+            pdfService.convert(file, fileType),
+            MediaType.parseMediaType(fileType.mediaType),
+        )
 
     private fun attachment(
         filename: String,
@@ -99,13 +62,5 @@ class PDFController(
             .contentLength(resource.contentLength())
             .contentType(mediaType)
             .body(resource)
-    }
-
-    companion object {
-        private val DOCX_MEDIA_TYPE =
-            MediaType.parseMediaType(
-                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            )
-        private val ZIP_MEDIA_TYPE = MediaType.parseMediaType("application/zip")
     }
 }

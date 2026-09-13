@@ -5,8 +5,6 @@ import org.apache.pdfbox.multipdf.PDFMergerUtility
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPageContentStream
 import org.apache.pdfbox.pdmodel.PDPageContentStream.AppendMode
-import org.apache.pdfbox.pdmodel.font.PDFont
-import org.apache.pdfbox.pdmodel.font.PDType0Font
 import org.apache.pdfbox.pdmodel.font.PDType1Font
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts
 import org.apache.pdfbox.pdmodel.graphics.state.PDExtendedGraphicsState
@@ -15,12 +13,10 @@ import org.apache.pdfbox.rendering.PDFRenderer
 import org.apache.pdfbox.text.PDFTextStripper
 import org.apache.pdfbox.util.Matrix
 import org.apache.poi.xwpf.usermodel.XWPFDocument
-import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.web.multipart.MultipartFile
 import java.io.ByteArrayOutputStream
-import java.io.File
 import java.io.IOException
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
@@ -33,17 +29,11 @@ class PdfService(
     @param:Value("\${pdf.max-pages:100}") private val maxPages: Int,
     @param:Value("\${pdf.render-dpi:300}") private val renderDpi: Float,
 ) {
-    fun validate(file: MultipartFile) {
+    private fun validate(file: MultipartFile) {
         if (file.isEmpty) {
             throw PdfRequestException("Empty file")
         }
-        val header = file.bytes
-        if (header.size < 4 ||
-            header[0] != '%'.code.toByte() ||
-            header[1] != 'P'.code.toByte() ||
-            header[2] != 'D'.code.toByte() ||
-            header[3] != 'F'.code.toByte()
-        ) {
+        if (!file.bytes.copyOf(4).contentEquals("%PDF".toByteArray())) {
             throw PdfRequestException("Not a PDF")
         }
     }
@@ -80,9 +70,9 @@ class PdfService(
         fontSize: Float,
         rotation: Float,
     ): ByteArray {
-        logger.info("Adding watermark to pdf")
         loadValidated(file).use { document ->
-            val font = loadFont(document)
+            // ponytail: Helvetica, embed a TTF if watermark text needs non-Latin glyphs
+            val font = PDType1Font(Standard14Fonts.FontName.HELVETICA)
             val radians = Math.toRadians(rotation.toDouble())
             for (page in document.pages) {
                 PDPageContentStream(document, page, AppendMode.APPEND, true, true).use { content ->
@@ -139,9 +129,7 @@ class PdfService(
                 for (page in 0 until document.numberOfPages) {
                     val image = renderer.renderImageWithDPI(page, renderDpi, ImageType.RGB)
                     zipOut.putNextEntry(ZipEntry("image-$page.png"))
-                    val png = ByteArrayOutputStream()
-                    ImageIO.write(image, "png", png)
-                    zipOut.write(png.toByteArray())
+                    ImageIO.write(image, "png", zipOut)
                     zipOut.closeEntry()
                 }
             }
@@ -175,27 +163,5 @@ class PdfService(
             throw PdfRequestException("PDF exceeds $maxPages pages")
         }
         return document
-    }
-
-    private fun loadFont(document: PDDocument): PDFont {
-        val file = FONT_CANDIDATES.map(::File).firstOrNull { it.isFile }
-        return if (file != null) {
-            PDType0Font.load(document, file)
-        } else {
-            PDType1Font(Standard14Fonts.FontName.HELVETICA)
-        }
-    }
-
-    companion object {
-        private val logger = LoggerFactory.getLogger(PdfService::class.java)
-        private val FONT_CANDIDATES =
-            listOf(
-                "/usr/share/fonts/dejavu/DejaVuSans.ttf",
-                "/usr/share/fonts/ttf-dejavu/DejaVuSans.ttf",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
-                "C:\\Windows\\Fonts\\arial.ttf",
-                "/Library/Fonts/Arial Unicode.ttf",
-                "/Library/Fonts/Arial.ttf",
-            )
     }
 }

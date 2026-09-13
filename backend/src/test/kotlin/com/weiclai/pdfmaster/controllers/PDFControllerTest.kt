@@ -1,7 +1,6 @@
 package com.weiclai.pdfmaster.controllers
 
 import com.weiclai.pdfmaster.pdf.PdfService
-import com.weiclai.pdfmaster.web.ApiExceptionHandler
 import org.apache.pdfbox.Loader
 import org.apache.pdfbox.pdmodel.PDDocument
 import org.apache.pdfbox.pdmodel.PDPage
@@ -34,7 +33,7 @@ import java.util.zip.ZipInputStream
     controllers = [PDFController::class],
     excludeAutoConfiguration = [OAuth2ResourceServerAutoConfiguration::class],
 )
-@Import(PdfService::class, ApiExceptionHandler::class)
+@Import(PdfService::class)
 @AutoConfigureMockMvc(addFilters = false)
 class PDFControllerTest {
     @Autowired
@@ -152,7 +151,7 @@ class PDFControllerTest {
     controllers = [PDFController::class],
     excludeAutoConfiguration = [OAuth2ResourceServerAutoConfiguration::class],
 )
-@Import(PdfService::class, ApiExceptionHandler::class)
+@Import(PdfService::class)
 @AutoConfigureMockMvc(addFilters = false)
 @TestPropertySource(properties = ["pdf.max-pages=1"])
 class PDFControllerPageLimitTest {

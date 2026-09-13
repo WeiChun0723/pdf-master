@@ -4,7 +4,6 @@ PDF Master is a Kotlin and Spring Boot REST API for common PDF operations. It ca
 
 ## Features
 
-- Upload a PDF and return its basic file information.
 - Combine multiple PDFs in the supplied order.
 - Add configurable text, font size, and rotation watermarks.
 - Convert PDF text to a DOCX document.
@@ -78,7 +77,6 @@ Supabase handles Google login and issues JWTs. Spring completes the PKCE exchang
 
 | Method | Endpoint | Parameters | Result |
 | --- | --- | --- | --- |
-| `POST` | `/api/pdf/upload` | `files`: one PDF | Upload confirmation text |
 | `POST` | `/api/pdf/combine` | `files`: multiple PDFs | `combined.pdf` |
 | `POST` | `/api/pdf/add-watermark` | `file`, `watermarkText`, `fontSize`, `rotation` | `watermarked.pdf` |
 | `POST` | `/api/pdf/convert` | `file`, `fileType`: `DOCX` or `PNG` | `word.docx` or `images.zip` |
