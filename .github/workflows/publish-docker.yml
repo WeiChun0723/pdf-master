@@ -16,7 +16,6 @@ jobs:
         with:
           username: weichunlai
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-          scope: weichunlai/pdf-master@push
       - uses: docker/build-push-action@v7
         with:
           context: backend
