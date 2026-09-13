@@ -111,7 +111,7 @@ docker build -t pdf-master .
 docker run --rm -p 8080:8080 pdf-master
 ```
 
-The multi-stage image builds the application with Java 25 and runs it as an unprivileged user on a Java 25 JRE.
+The multi-stage image builds the application with Java 25 and runs it as an unprivileged user on a jlink custom Java 25 runtime.
 
 ## Kubernetes
 
